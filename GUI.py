@@ -13,7 +13,29 @@ ex_shoulders = ["Military Press", "Lateral Raises", "Face Pulls", "Rear Delt Mac
 def preference_incorporation(profile, schedule):
     return
 
-def generate(profile, components):
+def generate(profile, hard_requirements, components):
+    # Use number of sessions from the profile to determine a schedule. Then divide the muscle
+    # groups over the sessions.
+    sessions_number = profile[0][3]
+
+    # The experience level will also count.
+    experience = hard_requirements[0]
+
+    schedule_type = ""
+
+    if sessions_number <= 2:
+        schedule_type = "Full-Body"
+    elif sessions_number < 3:
+        schedule_type = "Upper-Lower"
+    elif sessions_number >= 3:
+        if experience < 1:
+            schedule_type = "PPL"
+        else:
+            schedule_type = "Classic-Split"
+
+
+    # Depending on the schedule type, now divide muscle groups.
+
     return
 
 def get_exercises(group, generic_exercise_list, exercise_number, injuries):
@@ -55,15 +77,8 @@ def component_selection(profile, hard_requirements):
     absm = get_exercises("Abs", ex_abs, exercises_per_group, injuries)
     shoulders = get_exercises("Shoulders", ex_shoulders, exercises_per_group, injuries)
 
-    print(chest)
-    print(back)
-    print(legs)
-    print(biceps)
-    print(triceps)
-    print(absm)
-    print(shoulders)
-
-    return
+    # Return the combined list of all lists of exercises.
+    return [chest, back, legs, biceps, triceps, absm, shoulders]
 
 def operationalize(profile):
     # Training level, 0 - 4 (Beginner, Rookie, Intermediate, Experienced, Advanced).
@@ -152,14 +167,16 @@ def main():
     # Parse all input. All information will be stored inside the profile.
     profile = parse_input(data, preferences, injuries)
 
-    # Determine hard component requirements. Format is always [Intensity, Time Spent, Experience].
+    # Determine hard component requirements. Format is always [Intensity, Experience].
     hard_requirements = operationalize(profile)
 
-    # Select the components.
+    # Select the components, which in this case include all exercise to be done by the client. In case of an injury,
+    # the list of exercises for that specific muscle group is empty. The general format for the exercises
+    # list is as follows: [chest, back, legs, biceps, triceps, abs, shoulders].
     components = component_selection(profile, hard_requirements)
 
     # Generate a schedule from the set of existing schedules, depending on the profile and hard requirements.
-    schedule = generate(profile, components)
+    schedule = generate(profile, hard_requirements, components)
 
     # Adapt the schedule to the preferences.
     schedule = preference_incorporation(profile, schedule)
