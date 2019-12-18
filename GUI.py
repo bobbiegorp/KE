@@ -3,7 +3,20 @@
 def preference_incorporation(profile, schedule):
     return
 
-def generate(profile, hard_requirements):
+def generate(profile, components):
+    return
+
+def component_selection(profile, hard_requirements):
+    # Use the goal to find exercises.
+    goal = profile[0][5]
+
+    # Get the list of injuries, to exclude any exercise from that category.
+    injuries = profile[2]
+
+    # Depending on time available, pick x exercises from any category.
+    # Do not include any exercises from the category of injuries (if injury, then...).
+    # Depending on type of schedule, divide exercises/muscle groups over sessions.
+
     return
 
 def operationalize(profile):
@@ -65,7 +78,7 @@ def main():
     # window = sg.Window('Window Title', layout)
 
     # Data format: [Age, Gender, Weight, Hours, Level, TrainingScheduleFollowed, Goal]
-    data = [18, "M", 70, 3, 2, False, "Strength", [None]]
+    data = [18, "M", 70, 3, 2, False, "Strength"]
 
     # List of preferences. Always, in preferences, define exercises to remove from schedule.
     preferences = None
@@ -94,8 +107,11 @@ def main():
     # Determine hard component requirements. Format is always [Intensity, Time Spent, Experience].
     hard_requirements = operationalize(profile)
 
+    # Select the components.
+    components = component_selection(profile, hard_requirements)
+
     # Generate a schedule from the set of existing schedules, depending on the profile and hard requirements.
-    schedule = generate(profile, hard_requirements)
+    schedule = generate(profile, components)
 
     # Adapt the schedule to the preferences.
     schedule = preference_incorporation(profile, schedule)
