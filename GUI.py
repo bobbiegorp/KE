@@ -21,9 +21,14 @@ def generate(profile, hard_requirements, components):
     # The experience level will also count.
     experience = hard_requirements[0]
 
+    # The type of schedule the client will follow.
     schedule_type = ""
 
-    if sessions_number <= 2:
+    # List of sessions. The maximum number of sessions is three. If fewer sessions are used, the other three are
+    # empty, usable for later scheduling.
+    session = [[], [], []]
+
+    if sessions_number < 2:
         schedule_type = "Full-Body"
     elif sessions_number < 3:
         schedule_type = "Upper-Lower"
@@ -35,6 +40,50 @@ def generate(profile, hard_requirements, components):
 
 
     # Depending on the schedule type, now divide muscle groups.
+    if schedule_type == "Full-Body":
+        for muscle_group in components:
+            for component in muscle_group:
+                session[0].append(component)
+    
+
+    elif schedule_type == "Upper-Lower":
+        for muscle_group in range(0, 7):
+            for component in components[muscle_group]:
+                if muscle_group == 0 or muscle_group == 1 or muscle_group == 6 or muscle_group == 3 or muscle_group == 4:
+                    session[0].append(component)
+                else:
+                    session[1].append(component)
+
+    elif schedule_type == "PPL":
+        for muscle_group in range(0, 7):
+            for component in components[muscle_group]:
+                if muscle_group == 0 or muscle_group == 6 or muscle_group == 4:
+                    session[0].append(component)
+                elif muscle_group == 1 or muscle_group == 3 or muscle_group == 6:
+                    session[1].append(component)
+                else:
+                    session[2].append(component)
+
+    elif schedule_type == "Classic-Split":
+        for muscle_group in range(0, 7):
+            for component in components[muscle_group]:
+                if muscle_group == 0 or muscle_group == 1:
+                    session[0].append(component)
+                elif muscle_group == 2 or muscle_group == 5:
+                    session[1].append(component)
+                else:
+                    session[2].append(component)
+
+
+    # Some test prints.
+    print(schedule_type)
+    print("\n")
+    print(session[0])
+    print("\n")
+    print(session[1])
+    print("\n")
+    print(session[2])
+    print("\n")
 
     return
 
@@ -138,16 +187,16 @@ def main():
     # # Create the Window
     # window = sg.Window('Window Title', layout)
 
-    # TEST INPUTS BELOW:
+    # TEST INPUTS BELOW, this is how the data should look once received from the input:
 
     # Data format: [Age, Gender, Weight, Hours, Level, TrainingScheduleFollowed, Goal]
-    data = [18, "M", 70, 3, 2, False, "Strength"]
+    data = [18, "M", 70, 3, 5, False, "Strength"]
 
     # List of preferences. Always, in preferences, define exercises to remove from schedule.
     preferences = []
 
     # List of injuries.
-    injuries = ["Back"]
+    injuries = []
 
     # # Event Loop to process "events" and get the "values" of the inputs.
     # while True:
