@@ -50,10 +50,18 @@ def component_selection(profile, hard_requirements):
     chest = get_exercises("Chest", ex_chest, exercises_per_group, injuries)
     back = get_exercises("Back", ex_back, exercises_per_group, injuries)
     legs = get_exercises("Legs", ex_legs, exercises_per_group, injuries)
+    biceps = get_exercises("Biceps", ex_biceps, exercises_per_group, injuries)
+    triceps = get_exercises("Triceps", ex_triceps, exercises_per_group, injuries)
+    absm = get_exercises("Abs", ex_abs, exercises_per_group, injuries)
+    shoulders = get_exercises("Shoulders", ex_shoulders, exercises_per_group, injuries)
 
     print(chest)
     print(back)
     print(legs)
+    print(biceps)
+    print(triceps)
+    print(absm)
+    print(shoulders)
 
     return
 
