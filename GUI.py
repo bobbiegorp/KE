@@ -160,6 +160,11 @@ def operationalize(profile):
     return hard_requirements
 
 def parse_input(data, preferences, injuries):
+    try:
+        data[3] = int(data[3])
+    except:
+        raise Exception("Input error: Time available per week should be an integer")   
+        
     profile = [data, injuries, preferences]
     return profile
 
@@ -173,7 +178,7 @@ def get_data():
     layout = [  
         [sg.Text('Please fill in client information and click Next')],
         [sg.Text('Age'), sg.InputText()],
-        [sg.Text('Gender'), sg.InputCombo(('Male', 'Female'), size=(20, 3))],
+        [sg.Text('Gender'), sg.InputCombo(('M', 'F'), size=(20, 3))],
         [sg.Text('Weight in kg'), sg.InputText()],
         [sg.Text('Time available per week in hours'), sg.InputText()],
         [sg.Text('Training level (1-5)'), sg.Slider(range=(1, 5), orientation='h', size=(10, 20), default_value=1)],
@@ -183,7 +188,6 @@ def get_data():
                                           'General strength', 'Bodybuilding', 'General aesthetics', 'General endurance', 
                                           'Specific endurance'), size=(20, 10))],
         [sg.Checkbox('Client has specific preferences')],
-        [sg.Checkbox('Client has one or more injuries')],
         
         [sg.Button('Next'), sg.Button('Cancel')] ]
     
@@ -215,28 +219,28 @@ def get_data():
             
             window.close()
     
-    if data[8] == True:
-        layout = [  
-        [sg.Text('Please check where the client has an injury and click Next')],
-        [sg.Text('Injury 1'), sg.InputCombo(('Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
-                                          'Abs', 'Shoulders'), default_value='Chest', size=(20, 7))],
-        [sg.Text('Injury 2'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
-                                          'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
-        [sg.Text('Injury 3'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
-                                          'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
-        
-        [sg.Button('Next'), sg.Button('Cancel')] ]
-        
-        window = sg.Window('Injuries', layout)
-        
-        while True:
-            event, values = window.read()
-            if event in (None, 'Cancel'):   # if user closes window or clicks cancel
-                break
-            values = list(values.values())
-            injuries = [x for x in values if x != 'None']
-        
-            window.close()
+    
+    layout = [  
+    [sg.Text('Please check where the client has an injury and click Next')],
+    [sg.Text('Injury 1'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
+                                      'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
+    [sg.Text('Injury 2'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
+                                      'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
+    [sg.Text('Injury 3'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
+                                      'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
+    
+    [sg.Button('Next'), sg.Button('Cancel')] ]
+    
+    window = sg.Window('Injuries', layout)
+    
+    while True:
+        event, values = window.read()
+        if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+            break
+        values = list(values.values())
+        injuries = [x for x in values if x != 'None']
+    
+        window.close()
             
     data = list(data.values())[:7]
     
