@@ -1,4 +1,14 @@
 # import PySimpleGUI as sg
+import random
+
+# The lists of exercises for all muscle groups.
+ex_chest = ["Bench Press", "Dumbbell Flyes", "Incline Bench Press", "Machine Flyes"]
+ex_back = ["Dumbbell Rows", "Lat Pulldowns", "Machine Rows", "Cable Rows"]
+ex_legs = ["Squats", "Leg Curls", "Leg Extensions", "Romanian Deadlifts", "Prone Leg Curls"]
+ex_biceps = ["Curls", "Hammer Curls", "Reverse Grip Curls"]
+ex_triceps = ["Bar Pushdowns", "Skullcrushers", "Rope Pushdowns"]
+ex_abs = ["Crunches", "Sit-ups", "Bicycle Sit-ups", "Planking"]
+ex_shoulders = ["Military Press", "Lateral Raises", "Face Pulls", "Rear Delt Machine"]
 
 def preference_incorporation(profile, schedule):
     return
@@ -6,16 +16,44 @@ def preference_incorporation(profile, schedule):
 def generate(profile, components):
     return
 
+def get_exercises(group, generic_exercise_list, exercise_number, injuries):
+    # General function for getting exercises for a specific group, based on the number of
+    # exercises we want to get.
+
+    # List where all exercises will go.
+    exercise_list = []
+
+    # Check per group if the injury is in the list. If not, then pick exercises from that group.
+    counter = 0
+    if group not in injuries:
+        while counter < exercise_number:
+            new_exercise = random.choice(generic_exercise_list)
+
+            if not new_exercise in exercise_list:
+                exercise_list.append(new_exercise)
+                counter += 1
+
+    return exercise_list
+
 def component_selection(profile, hard_requirements):
     # Use the goal to find exercises.
     goal = profile[0][5]
 
     # Get the list of injuries, to exclude any exercise from that category.
-    injuries = profile[2]
+    injuries = profile[1]
 
     # Depending on time available, pick x exercises from any category.
-    # Do not include any exercises from the category of injuries (if injury, then...).
-    # Depending on type of schedule, divide exercises/muscle groups over sessions.
+    sessions_available = profile[0][3]
+    exercises_per_group = sessions_available
+
+    # The list of exercises per muscle group.
+    chest = get_exercises("Chest", ex_chest, exercises_per_group, injuries)
+    back = get_exercises("Back", ex_back, exercises_per_group, injuries)
+    legs = get_exercises("Legs", ex_legs, exercises_per_group, injuries)
+
+    print(chest)
+    print(back)
+    print(legs)
 
     return
 
@@ -77,11 +115,13 @@ def main():
     # # Create the Window
     # window = sg.Window('Window Title', layout)
 
+    # TEST INPUTS BELOW:
+
     # Data format: [Age, Gender, Weight, Hours, Level, TrainingScheduleFollowed, Goal]
     data = [18, "M", 70, 3, 2, False, "Strength"]
 
     # List of preferences. Always, in preferences, define exercises to remove from schedule.
-    preferences = None
+    preferences = []
 
     # List of injuries.
     injuries = ["Back"]
