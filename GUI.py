@@ -1,5 +1,6 @@
 import PySimpleGUI as sg
 import random
+import math
 
 # The lists of exercises for all muscle groups.
 ex_chest = ["Bench Press", "Dumbbell Flyes", "Incline Bench Press", "Machine Flyes"]
@@ -11,7 +12,7 @@ ex_abs = ["Crunches", "Sit-ups", "Bicycle Sit-ups", "Planking"]
 ex_shoulders = ["Military Press", "Lateral Raises", "Face Pulls", "Rear Delt Machine"]
 
 def preference_incorporation(profile, schedule):
-    return
+    return schedule
 
 def generate(profile, hard_requirements, components):
     # Use number of sessions from the profile to determine a schedule. Then divide the muscle
@@ -85,7 +86,7 @@ def generate(profile, hard_requirements, components):
     print(session[2])
     print("\n")
 
-    return
+    return session
 
 def get_exercises(group, generic_exercise_list, exercise_number, injuries):
     # General function for getting exercises for a specific group, based on the number of
@@ -175,6 +176,43 @@ def parse_input(data, preferences, injuries):
     profile = [data, injuries, preferences]
     return profile
 
+def subfunct_text(schedule, i, j):
+    try:
+        return sg.Text(schedule[j][i].ljust(20), size=(20,1))
+    except:
+        return sg.Text(' '.ljust(20), size=(20,1))
+    
+
+def get_approval(schedule):
+    
+    headings = ['Session ' + str(i+1) for i in range(3) if schedule[i]]
+    header =  [[sg.Text('  ')] + [sg.Text(h, size=(20,1)) for h in headings]]
+
+    max_exer = 0
+    for sess in schedule:
+        if len(sess) > max_exer:
+            max_exer = len(sess)
+    
+    input_rows = [[subfunct_text(schedule, i, j) for j in range(len(headings))] for i in range(max_exer)]
+
+    layout = header + input_rows + [[sg.Button('Refuse')]]
+    
+    window = sg.Window('Schedule approval', layout)
+    
+    while True:
+        event, values = window.read()
+        if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+            break
+        
+        approved = True
+        if event == 'Refuse':
+            approved = False
+            
+        window.close()
+    
+    
+    return approved  
+
 def get_data():
     data = None
     preferences = None
@@ -211,8 +249,31 @@ def get_data():
         window.close()
         
     if data[7] == True:
+        possible_values = ex_abs + ex_back + ex_biceps + ex_chest + ex_legs + ex_shoulders + ex_triceps
+        # possible_values = [ex.name for ex in onto.search(type = onto.Exercise)]
+        
         layout = [  
         [sg.Text('Please fill in preferences and click Next')],
+        [sg.Text('                                                                         '), 
+         sg.Text('Intensity')],
+        
+        [sg.Text('Preference 1'), sg.InputCombo(possible_values, default_value='None', size=(20, 7)),  
+         sg.Text('    '),
+         sg.Slider(range=(1, 5), orientation='h', size=(10, 20), default_value=1),
+         sg.Text('    '),
+         sg.Checkbox('Include')],
+        
+        [sg.Text('Preference 2'), sg.InputCombo(possible_values, default_value='None', size=(20, 7)),  
+         sg.Text('    '),
+         sg.Slider(range=(1, 5), orientation='h', size=(10, 20), default_value=1),
+         sg.Text('    '),
+         sg.Checkbox('Include')],
+        
+        [sg.Text('Preference 3'), sg.InputCombo(possible_values, default_value='None', size=(20, 7)),  
+         sg.Text('    '),
+         sg.Slider(range=(1, 5), orientation='h', size=(10, 20), default_value=1),
+         sg.Text('    '),
+         sg.Checkbox('Include')],
         
         [sg.Button('Next'), sg.Button('Cancel')] ]
         
@@ -222,19 +283,33 @@ def get_data():
             event, values = window.read()
             if event in (None, 'Cancel'):   # if user closes window or clicks cancel
                 break
-            preferences = values 
+
+            # Create right output data shape            
+            values = list(values.values())
+            new_values = []
+            for i in range(len(values)):
+                first_index = math.floor(i / 3)
+                modulo = i % 3
+                if modulo == 0:
+                    new_values.append([])
+                new_values[first_index].append(values[i])
+                
+            preferences = new_values
+            
+            print(preferences)
             
             window.close()
     
+    possible_injuries = ['None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
+                                      'Abs', 'Shoulders']
+    
+    #possible_injuries = [ x.label for x in onto.search(iri = "*Injury")[1:] if x.name != "Injury" and x.name != 'Connective_and_Soft_Tissue_Injury']
     
     layout = [  
     [sg.Text('Please check where the client has an injury and click Next')],
-    [sg.Text('Injury 1'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
-                                      'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
-    [sg.Text('Injury 2'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
-                                      'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
-    [sg.Text('Injury 3'), sg.InputCombo(('None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
-                                      'Abs', 'Shoulders'), default_value='None', size=(20, 7))],
+    [sg.Text('Injury 1'), sg.InputCombo(possible_injuries, default_value='None', size=(20, 7))],
+    [sg.Text('Injury 2'), sg.InputCombo(possible_injuries, default_value='None', size=(20, 7))],
+    [sg.Text('Injury 3'), sg.InputCombo(possible_injuries, default_value='None', size=(20, 7))],
     
     [sg.Button('Next'), sg.Button('Cancel')] ]
     
@@ -285,7 +360,13 @@ def main():
     schedule = preference_incorporation(profile, schedule)
 
     # Judgment by the client.
-    # Open a new window. Show the schedule. Click yes or no. If yes, end. If no, go back to input.
+    # Open a new window. Show the schedule. Click yes or no. If yes, end. If no, go back to input.   
+    approved = get_approval(schedule)
+    
+    if not approved:
+        schedule = main()
+        
+    return schedule
 
 if __name__ == '__main__':
     main()
