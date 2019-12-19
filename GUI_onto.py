@@ -183,9 +183,20 @@ def operationalize(profile):
 
 def parse_input(data, preferences, injuries):
     try:
+        data[0] = int(data[0])
+    except:
+        raise Exception("Input error: Age should be an integer")
+        
+    try:
+        data[2] = int(data[2])
+    except:
+        raise Exception("Input error: Weight should be an integer")
+    
+    try:
         data[3] = int(data[3])
     except:
-        raise Exception("Input error: Time available per week should be an integer")   
+        raise Exception("Input error: Time available per week should be an integer")  
+        
     
     chosen_goal = data[-1]
     for onto_goal in onto_goals:

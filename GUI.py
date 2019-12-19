@@ -150,6 +150,8 @@ def operationalize(profile):
         intensity = 1
 
     age = profile[0][0]
+    
+    print(type(age))
 
     # If the client is over the age of 65 or under the age of 16, then the maximum intensity level is
     # medium, for health reasons.
@@ -163,8 +165,13 @@ def parse_input(data, preferences, injuries):
     try:
         data[3] = int(data[3])
     except:
-        raise Exception("Input error: Time available per week should be an integer")   
+        raise Exception("Input error: Time available per week should be an integer")  
         
+    try:
+        data[0] = int(data[0])
+    except:
+        raise Exception("Input error: Age should be an integer")
+            
     profile = [data, injuries, preferences]
     return profile
 
