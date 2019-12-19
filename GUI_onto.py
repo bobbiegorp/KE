@@ -12,7 +12,7 @@ import math
 #ex_abs = ["Crunches", "Sit-ups", "Bicycle Sit-ups", "Planking"]
 #ex_shoulders = ["Military Press", "Lateral Raises", "Face Pulls", "Rear Delt Machine"]
 
-onto = get_ontology("file://./final_ontology2.owl").load() #Can also load after GUI to reduce load time, then move the global variables
+onto = get_ontology("file://./final_ontology2.owl").load() #Can also load after GUI to reduce waiting time, then move the global variables
 
 #Classes
 ex_chest = onto.search(type = onto.ChestExercise)
@@ -22,9 +22,11 @@ ex_biceps = onto.search(type = onto.BicepsExercise)
 ex_triceps = onto.search(type = onto.TricepsExercise)
 ex_abs = onto.search(type = onto.AbsExercise)
 ex_shoulders = onto.search(type = onto.ShouldersExercise)
+ex_endurance = onto.search(type = onto.Endurance_Exercise)
 
 onto_injuries = onto.search(iri = "*Injury")[1:]
-onto_goals = onto.search(subclass_of = onto.Goal)[1:]
+onto_goals = onto.search(type = onto.Goal)
+instan_ex = onto.search(type = onto.Exercise)
 
 def preference_incorporation(profile, schedule):
     return schedule
@@ -129,13 +131,12 @@ def get_exercises(group, generic_exercise_list, exercise_number, injuries):
 
 def component_selection(goal,profile,injuries,hard_component_requirements):
     # Use the goal to find exercises.
-    goal = goal.name
-    
+    goal_instance = goal.name
+    goal_class = [ancestor.name for ancestor in goal.is_a[0].ancestors() if ancestor.name != "Thing" and ancestor.name != "Goal"][0]
     
     # Get the list of injuries, to exclude any exercise from that category.
-    injuries #List of injuries object, get label with .label (which all should have) otherwise .name for class name
+    injuries #List of injuries object, get label with .label (which all should have) otherwise .name for class name   
     
-
     # Depending on time available, pick x exercises from any category.
     sessions_available = profile.TimeAvailable[0]
     exercises_per_group = sessions_available
@@ -148,6 +149,17 @@ def component_selection(goal,profile,injuries,hard_component_requirements):
     triceps = get_exercises(onto.TricepsInjury, ex_triceps, exercises_per_group, injuries)
     absm = get_exercises(onto.Abs_Injury, ex_abs, exercises_per_group, injuries)
     shoulders = get_exercises(onto.ShoulderInjury, ex_shoulders, exercises_per_group, injuries)
+    endurance = get_exercises(onto.ShoulderInjury, ex_endurance, exercises_per_group, injuries)
+
+    # Return the combined list of all lists of exercises.
+
+    if goal_class == "Endurance":
+        components = [endurance]
+    elif goal_class == "Health":
+        components = [chest,back,legs,absm,shoulders, [onto.Running]]
+    else:
+        components = [chest, back, legs, biceps, triceps, absm, shoulders]
+        
 
     # Return the combined list of all lists of exercises.
     return [chest, back, legs, biceps, triceps, absm, shoulders]
@@ -199,10 +211,11 @@ def parse_input(data, preferences, injuries):
         raise Exception("Input error: Time available per week should be an integer")  
         
     
-    chosen_goal = data[-1]
+    chosen_goal = data[-1].lower().replace(" ","")
     for onto_goal in onto_goals:
-        if chosen_goal in onto_goal.label[0]:
-            person_goal = onto_goal()
+        base_goal_name = re.sub(r'_', "", onto_goal.name).lower() #Do this in case of exercises with a _ seperator
+        if chosen_goal == base_goal_name:
+            person_goal = onto_goal
             break
 
     #Profile       
@@ -223,24 +236,33 @@ def parse_input(data, preferences, injuries):
     specified_onto_injuries = []
     for specified_injury in injuries:
         for onto_injury in onto_injuries:
-            #re.sub(r'_', "", injuries[-1].name).lower()
-            if specified_injury in onto_injury.name:
+            if specified_injury == onto_injury.label[0]:
                 specified_onto_injuries.append( onto_injury() )
                 break
     person.HasInjury = specified_onto_injuries  #[ankle_injury]
 
     #Preferences
-    pref = onto.Preference()
-    pref.HasPreferenceExercise = [onto.Crunches] #A instance here
-    pref.ifohasActivityIntensity = [onto.MediumIntensity()] #Can allow Heavy intensity?
-    pref.WantsItOrnot = [False]
+    specified_ont_preferences = []
+    if type(preferences) != list:
+        preferences = []
+        
+    for specified_preference in preferences:
+        specified_onto_ex = None
+        
+        for onto_ex in instan_ex:
+            #base_name = re.sub(r'_', "", onto_ex.name).lower() #Do this in case of exercises with a _ seperator
+            #specified_preference_ex = specified_preference[0].lower()
+            if specified_preference[0] == onto_ex.name: #in base_name:
+                specified_onto_ex = onto_ex
+                break
 
-    pref2 = onto.Preference()
-    pref2.HasPreferenceExercise = [onto.ChestExercise("Chest")]  # A class here
-    pref2.ifohasActivityIntensity = [onto.HeavyIntensity()]  # Also includes Medium and light to avoid basically
-    pref2.WantsItOrnot = [False]
+        pref = onto.Preference()
+        pref.HasPreferenceExercise = [specified_onto_ex]
+        pref.ActivityIntensity = [specified_preference[1]]
+        pref.WantsItOrnot = [specified_preference[2]]
+        specified_ont_preferences.append(pref)
 
-    person.HasPreference = [pref,pref2]
+    person.HasPreference = specified_ont_preferences
 
     return person
 
@@ -408,9 +430,14 @@ def main():
     #data = [18, "M", 70, 3, 5, False, "Strength"]
 
     # List of preferences. Always, in preferences, define exercises to remove from schedule.
-    preferences = []
+    #crunches = instan_ex[0].name
+    #circuit = instan_ex[15].name #If used for first time
+    #preferences = [ [instan_ex[0].name,2,False],[circuit,1,False] ]
+    #preferences = []
 
     # List of injuries.
+    #back_injury = onto_injuries[2].label[0]
+    #injuries = [ back_injury ] #Backinjury
     #injuries = []
 
     # Parse all input. All information will be stored inside the profile.
@@ -418,11 +445,11 @@ def main():
     profile = person_info.HasProfile[0]
     preferences = person_info.HasPreference
     goal = person_info.WantsToAchieve[0]
-    injuries = person.HasInjury
+    injuries = person_info.HasInjury
     
     # Determine hard component requirements. Format is always [Intensity, Experience].
     hard_component_requirements = operationalize(profile)
-
+    return
     # Select the components, which in this case include all exercise to be done by the client. In case of an injury,
     # the list of exercises for that specific muscle group is empty. The general format for the exercises
     # list is as follows: [chest, back, legs, biceps, triceps, abs, shoulders].
