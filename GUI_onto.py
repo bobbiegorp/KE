@@ -480,8 +480,8 @@ def get_data():
 
 def subfunct_text(schedule, i, j):
     try:
-        
-        return sg.Text(schedule[j][i].name.ljust(20), size=(20,1))
+        string = str(schedule[j][i].name) + " " + str(schedule[j][i].ActivityIntensity)
+        return sg.Text(string.ljust(20), size=(20,1))
     except:
         return sg.Text(' '.ljust(20), size=(20,1))
 
@@ -518,6 +518,8 @@ def get_approval(schedule):
         
         if event == 'Refuse':
             approved = False
+            window.close()
+            break
     
     return approved
     
