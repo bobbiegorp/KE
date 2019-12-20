@@ -24,16 +24,16 @@ instan_ex = onto.search(type = onto.Exercise)
 
 def preference_incorporation(preferences, sessions,intensity,components):
     
-    #intensity = schedule[1]
-    #final_intensities = [intensity]
-    
+    #We check all the specified preferences
     for pref in preferences:
         
+        #Extract its information
         specified_ex_pref = pref.HasPreferenceExercise[0]
         specified_intensity = pref.ActivityIntensity[0]
         wants_included = pref.WantsItOrnot[0]
         ex_class = specified_ex_pref.is_a[0].label[0]
         
+        #If want a certain exercise to be removed
         if not wants_included:
             done = False
             for i,session in enumerate(sessions):
@@ -41,6 +41,8 @@ def preference_incorporation(preferences, sessions,intensity,components):
                     break
              
                 for j,ex in enumerate(session):
+                    
+                    #If found the exercise with the same name, see if we can replace it with another one from same class
                     if ex.name == specified_ex_pref.name:
                         subs_avail = False
                         for muscle_group in components:
@@ -55,7 +57,8 @@ def preference_incorporation(preferences, sessions,intensity,components):
                             del sessions[i][j]
                         done = True
                         break
-            
+        
+        #If want included, see if it is already present, then change intensity if allowed else add to session
         elif specified_intensity <= intensity:
             
             found_session = None
@@ -66,10 +69,9 @@ def preference_incorporation(preferences, sessions,intensity,components):
              
                 for j,ex in enumerate(session):
                     if ex.name == specified_ex_pref.name:
-                        #specification = ("Session %d" % i, ex.name, specified_intensity)
-                        #final_intensity.append(specification)
+ 
                         already_exists = True
-                        ex.ActivityIntensity = [int(specified_intensity)]
+                        ex.ActivityIntensity = [min(intensity,int(specified_intensity))]
                         done = True 
                         break
                         
@@ -78,10 +80,9 @@ def preference_incorporation(preferences, sessions,intensity,components):
             if not already_exists:
                 specified_ex_pref.ActivityIntensity = [int(specified_intensity)]
                 sessions.append(specified_ex_pref)
-                #specification = ("Session %d" % i, specified_ex_pref.name, specified_intensity)
-                #final_intensity.append(specification)      
+    
                          
-    return sessions #,final_intensities]
+    return sessions 
 
 def generate(hard_plan_requirements, hard_component_requirements, components):
     # Use number of sessions from the profile to determine a schedule. Then divide the muscle
@@ -169,16 +170,6 @@ def generate(hard_plan_requirements, hard_component_requirements, components):
                 else:
                     session[2].append(component)
 
-    # Some test prints.
-    print(schedule_type)
-    print("\n")
-    print(session[0])
-    print("\n")
-    print(session[1])
-    print("\n")
-    print(session[2])
-    print("\n")
-
     return session,components
 
 def check_type_injury(type_injury, generic_exercise_list, injuries):
@@ -199,7 +190,7 @@ def component_selection(goal,profile,injuries,hard_component_requirements):
 
     # The list of exercises per muscle group if not in injury
     
-    #Classes with specific ordering
+    #Classes with specific ordering in importance 
     ex_chest = [onto.BenchPress, onto.DumbbellFlyes, onto.InclineBenchPress, onto.MachinePress]
     ex_back = [onto.Deadlifts, onto.LateralPulldowns, onto.DumbbellRows, onto.MachineRows, onto.CableRows]
     ex_legs = [onto.Squats, onto.RomanianDeadlifts, onto.LegCurls, onto.LegExtensions, onto.ProneLegCurls]
@@ -219,15 +210,17 @@ def component_selection(goal,profile,injuries,hard_component_requirements):
     endurance = check_type_injury(onto_injuries[-11], ex_endurance, injuries)
     running_only = [onto.Running] if len(endurance) > 0 else []
 
-    # Return the combined list of all lists of exercises.
-
+    # Return the combined list of all lists of exercises if not in injuries
+    
+    #Choose muscle groups based on goal
     if goal_class == "Endurance":
         components = [endurance]
     elif goal_class == "Health":
         components = [chest,back,legs,absm,shoulders, running_only]
     else:
         components = [chest, back, legs, biceps, triceps, absm, shoulders]
-        
+    
+    #Remove empty lists
     final_components = []
     for list_ex in components:
         if len(list_ex) > 0:
@@ -237,7 +230,7 @@ def component_selection(goal,profile,injuries,hard_component_requirements):
     return final_components
 
 def operationalize(profile):
-    # Training level, 0 - 4 (Beginner, Rookie, Intermediate, Experienced, Advanced).
+    # Training level, 1 - 5(Beginner, Rookie, Intermediate, Experienced, Advanced).
     training_level = profile.TrainingLevel[0]
     time_spent = profile.TimeSpentGym[0]  
 
@@ -265,7 +258,7 @@ def operationalize(profile):
 
     age = profile.Age[0]
 
-    # If the client is over the age of 65 or under the age of 16, then the maximum intensity level is
+    # If the client is over the age of 60 or under the age of 16, then the maximum intensity level is
     # medium, for health reasons.
     if intensity > 2 and (age > 60 or age < 16):
         intensity = 2
@@ -296,7 +289,7 @@ def parse_input(data, preferences, injuries):
         raise Exception("Input error: Estimated total time spent in gym should be an integer")  
     
         
-    print(data[6])
+    #Find the matching goal object from ontology
     chosen_goal = data[6].lower().replace(" ","")
     for onto_goal in onto_goals:
         base_goal_name = re.sub(r'_', "", onto_goal.name).lower() #Do this in case of exercises with a _ seperator
@@ -304,7 +297,7 @@ def parse_input(data, preferences, injuries):
             person_goal = onto_goal
             break
 
-    # Profile       
+    # Create Profile object and fill it in from the data
     profile = onto.Profile()
     profile.Age = [data[0]]
     profile.Gender = [data[1]]
@@ -312,14 +305,13 @@ def parse_input(data, preferences, injuries):
     profile.TimeAvailable = [data[3]]
     profile.TrainingLevel = [data[4]]
     profile.FollowedScheduleBefore = [data[5]]
-    profile.TimeSpentGym = [data[7]] #<----------------------------------------------------------------Uncomment this if implemented
+    profile.TimeSpentGym = [data[7]] 
 
     person = onto.Person() #Can give a name
     person.WantsToAchieve = [person_goal]
     person.HasProfile = [profile]
 
-    # Parse the injury inputs.
-    #ankle_injury = injuries[0]()
+    # Parse the injury inputs by matching the labels of the classes
     specified_onto_injuries = []
     for specified_injury in injuries:
         for onto_injury in onto_injuries:
@@ -337,9 +329,7 @@ def parse_input(data, preferences, injuries):
         specified_onto_ex = None
         
         for onto_ex in instan_ex:
-            # base_name = re.sub(r'_', "", onto_ex.name).lower() #Do this in case of exercises with a _ seperator
-            # specified_preference_ex = specified_preference[0].lower()
-            if specified_preference[0] == onto_ex.name: #in base_name:
+            if specified_preference[0] == onto_ex.name: 
                 specified_onto_ex = onto_ex
                 break
 
@@ -539,21 +529,6 @@ def main():
     data, preferences, injuries = get_data()
     if data == [] and preferences ==  [] and injuries == []:
         return None
-    # TEST INPUTS BELOW, this is how the data should look once received from the input:
-
-    # Data format: [Age, Gender, Weight, Hours, Level, TrainingScheduleFollowed, Goal]
-    #data = [18, "M", 70, 3, 5, False, "General strength"]
-
-    # List of preferences. Always, in preferences, define exercises to remove from schedule.
-    #crunches = instan_ex[0].name
-    #circuit = instan_ex[15].name #If used for first time
-    #preferences = [ [instan_ex[0].name,2,False],[circuit,1,False] ]
-    #preferences = []
-
-    # List of injuries.
-    #back_injury = onto_injuries[2].label[0]
-    #injuries = [ back_injury ] #Backinjury
-    #injuries = []
 
     # Parse all input. All information will be stored inside the profile.
     person_info = parse_input(data, preferences, injuries)
@@ -561,10 +536,6 @@ def main():
     preferences = person_info.HasPreference
     goal = person_info.WantsToAchieve[0]
     injuries = person_info.HasInjury
-    
-    #profile.TimeSpentGym = [41] #-----------------------------------------------------------------------Remove this if implemented
-    print(preferences)
-    print(profile.TimeSpentGym)
     
     # Determine hard component requirements. Format is always [Intensity, Experience].
     hard_component_requirements = operationalize(profile)
@@ -574,31 +545,14 @@ def main():
     # the list of exercises for that specific muscle group is empty. The general format for the exercises
     # list is as follows: [chest, back, legs, biceps, triceps, abs, shoulders].
     components = component_selection(goal,profile,injuries,hard_component_requirements)
-    #print(components,"\n")
+
     # Generate a schedule from the set of existing schedules, depending on the profile and hard requirements.
     hard_plan_requirements = profile.TimeAvailable[0]
     schedule,components = generate(hard_plan_requirements, hard_component_requirements, components)
-   
-    for s in schedule:
-        for ex in s:
-            print(ex.name,ex.ActivityIntensity)
 
     # Adapt the schedule to the preferences.
     schedule = preference_incorporation(preferences, schedule,intensity,components)
     
-    session = schedule
-    print("After preference incorporation")
-    print("\n")
-    print(session[0])
-    print("\n")
-    print(session[1])
-    print("\n")
-    print(session[2])
-    print("\n")
-    for s in session:
-        for ex in s:
-            print(ex.name,ex.ActivityIntensity)
-    #return
     # Judgment by the client.
     # Open a new window. Show the schedule. Click yes or no. If yes, end. If no, go back to input.
     approved = get_approval(schedule)
