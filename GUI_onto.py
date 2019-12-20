@@ -99,13 +99,16 @@ def generate(hard_plan_requirements, hard_component_requirements, components):
         else:
             schedule_type = "Classic-Split"
 
-    # Depending on the schedule type, now divide muscle groups.
+    # Depending on the schedule type, now divide the muscle groups.
+    # For full body, we simply put all exercises in the first session.
     if schedule_type == "Full-Body":
         for muscle_group in components:
             component = muscle_group.pop(0)
             component.ActivityIntensity = [intensity]
             session[0].append(component)
     
+    # For upper-lower split, we put all upper body exercises in the first session, and all other exercises
+    # in the second session.
     elif schedule_type == "Upper-Lower":
         for muscle_group in components:
             label = muscle_group[0].is_a[0].label[0]  #class Label
@@ -120,6 +123,7 @@ def generate(hard_plan_requirements, hard_component_requirements, components):
                 else:
                     session[1].append(component)
 
+    # For PPL and the Classic Split, we divide the muscle groups over the three sessions.
     elif schedule_type == "PPL":
         for muscle_group in components:
             label = muscle_group[0].is_a[0].label[0]  #class Label
@@ -195,7 +199,6 @@ def component_selection(goal,profile,injuries,hard_component_requirements):
     ex_shoulders = [onto.MilitaryPress, onto.LateralRaises, onto.FacePulls, onto.RearDeltMachine]
     ex_endurance = [onto.Running, onto.Cycling, onto.Rowing, onto.Circuit_Training]
     
-    
     chest = check_type_injury(onto.Chest_Injury, ex_chest, injuries)
     back = check_type_injury(onto_injuries[2], ex_back, injuries)
     legs = check_type_injury(onto_injuries[-11], ex_legs, injuries)
@@ -261,6 +264,7 @@ def operationalize(profile):
     return hard_component_requirements
 
 def parse_input(data, preferences, injuries):
+    # Checks for the data that was in the input, if their types were correct.
     try:
         data[0] = int(data[0])
     except:
@@ -284,7 +288,7 @@ def parse_input(data, preferences, injuries):
             person_goal = onto_goal
             break
 
-    #Profile       
+    # Profile       
     profile = onto.Profile()
     profile.Age = [data[0]]
     profile.Gender = [data[1]]
@@ -292,13 +296,13 @@ def parse_input(data, preferences, injuries):
     profile.TimeAvailable = [data[3]]
     profile.TrainingLevel = [data[4]]
     profile.FollowedScheduleBefore = [data[5]]
-    #profile.TimeSpentGym = [data[6]] <----------------------------------------------------------------Uncomment this if implemented
+    # profile.TimeSpentGym = [data[6]] <----------------------------------------------------------------Uncomment this if implemented
 
     person = onto.Person() #Can give a name
     person.WantsToAchieve = [person_goal]
     person.HasProfile = [profile]
 
-    #Injuries
+    # Parse the injury inputs.
     #ankle_injury = injuries[0]()
     specified_onto_injuries = []
     for specified_injury in injuries:
@@ -308,7 +312,7 @@ def parse_input(data, preferences, injuries):
                 break
     person.HasInjury = specified_onto_injuries  #[ankle_injury]
 
-    #Preferences
+    # Parse the preferences.
     specified_ont_preferences = []
     if type(preferences) != list:
         preferences = []
@@ -317,8 +321,8 @@ def parse_input(data, preferences, injuries):
         specified_onto_ex = None
         
         for onto_ex in instan_ex:
-            #base_name = re.sub(r'_', "", onto_ex.name).lower() #Do this in case of exercises with a _ seperator
-            #specified_preference_ex = specified_preference[0].lower()
+            # base_name = re.sub(r'_', "", onto_ex.name).lower() #Do this in case of exercises with a _ seperator
+            # specified_preference_ex = specified_preference[0].lower()
             if specified_preference[0] == onto_ex.name: #in base_name:
                 specified_onto_ex = onto_ex
                 break
@@ -338,8 +342,10 @@ def get_data():
     preferences = None
     injuries = None
     
-    sg.change_look_and_feel('Reddit')    # Add a touch of color
-    # All the stuff inside your window.
+    # Add a touch of color.
+    sg.change_look_and_feel('Reddit')
+    
+    # All the stuff inside the UI window.
     layout = [  
         [sg.Text('Please fill in client information and click Next')],
         [sg.Text('Age'), sg.InputText()],
@@ -401,10 +407,12 @@ def get_data():
         
         while True:
             event, values = window.read()
-            if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+
+            # If the user closes window or clicks cancel.
+            if event in (None, 'Cancel'):
                 break
 
-            # Create right output data shape            
+            # Create right output data shape.          
             values = list(values.values())
             new_values = []
             for i in range(len(values)):
@@ -461,6 +469,9 @@ def get_approval(schedule):
 
     #final_intensities = schedule[1]
     #schedule = schedule[0]
+
+    # Set the standard value of approved to True.
+    approved = True
     
     headings = ['Session ' + str(i+1) for i in range(3) if schedule[i]]
     header =  [[sg.Text('  ')] + [sg.Text(h, size=(20,1)) for h in headings]]
@@ -476,17 +487,16 @@ def get_approval(schedule):
     
     window = sg.Window('Schedule approval', layout)
     
+    # Wait for the scheduler to input whether or not the schedule was refused or not.
     while True:
         event, values = window.read()
         if event in (None, 'Cancel'):   # if user closes window or clicks cancel
             break
         
-        approved = True
         if event == 'Refuse':
             approved = False
             
         window.close()
-    
     
     return approved
     
