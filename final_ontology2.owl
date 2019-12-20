@@ -8394,6 +8394,14 @@
     
 
 
+    <!-- http://www.semanticweb.org/ontologies/2013/2/OPE.owl#Bicycle_Situps -->
+
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#Bicycle_Situps">
+        <rdf:type rdf:resource="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#AbsExercise"/>
+    </owl:NamedIndividual>
+    
+
+
     <!-- http://www.semanticweb.org/ontologies/2013/2/OPE.owl#BodyBuilding -->
 
     <owl:NamedIndividual rdf:about="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#BodyBuilding">
@@ -8438,6 +8446,14 @@
 
     <owl:NamedIndividual rdf:about="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#Cycling">
         <rdf:type rdf:resource="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#Endurance_Exercise"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/ontologies/2013/2/OPE.owl#Deadlifts -->
+
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#Deadlifts">
+        <rdf:type rdf:resource="http://www.semanticweb.org/ontologies/2013/2/OPE.owl#BackExercise"/>
     </owl:NamedIndividual>
     
 

@@ -3,18 +3,10 @@ import random, re
 from owlready2 import *
 import math
 
-# The lists of exercises for all muscle groups.
-#ex_chest = ["Bench Press", "Dumbbell Flyes", "Incline Bench Press", "Machine Flyes"]
-#ex_back = ["Dumbbell Rows", "Lat Pulldowns", "Machine Rows", "Cable Rows"]
-#ex_legs = ["Squats", "Leg Curls", "Leg Extensions", "Romanian Deadlifts", "Prone Leg Curls"]
-#ex_biceps = ["Curls", "Hammer Curls", "Reverse Grip Curls"]
-#ex_triceps = ["Bar Pushdowns", "Skullcrushers", "Rope Pushdowns"]
-#ex_abs = ["Crunches", "Sit-ups", "Bicycle Sit-ups", "Planking"]
-#ex_shoulders = ["Military Press", "Lateral Raises", "Face Pulls", "Rear Delt Machine"]
-
 onto = get_ontology("file://./final_ontology2.owl").load() #Can also load after GUI to reduce waiting time, then move the global variables
 
-#Classes
+'''
+#General Classes
 ex_chest = onto.search(type = onto.ChestExercise)
 ex_back = onto.search(type = onto.BackExercise)
 ex_legs = onto.search(type = onto.LegsExercise)
@@ -23,21 +15,72 @@ ex_triceps = onto.search(type = onto.TricepsExercise)
 ex_abs = onto.search(type = onto.AbsExercise)
 ex_shoulders = onto.search(type = onto.ShouldersExercise)
 ex_endurance = onto.search(type = onto.Endurance_Exercise)
+'''
+
 
 onto_injuries = onto.search(iri = "*Injury")[1:]
 onto_goals = onto.search(type = onto.Goal)
 instan_ex = onto.search(type = onto.Exercise)
 
-def preference_incorporation(profile, schedule):
-    return schedule
+def preference_incorporation(preferences, sessions,intensity):
+    
+    #intensity = schedule[1]
+    #final_intensities = [intensity]
+    
+    for pref in preferences:
+        
+        specified_ex_pref = pref.HasPreferenceExercise[0]
+        specified_intensity = pref.ActivityIntensity[0]
+        wants_included = pref.WantsItOrnot[0]
+        ex_class = specified_ex_pref.is_a[0].label[0]
+        
+        if not wants_included:
+            done = False
+            for i,session in enumerate(sessions):
+                if done:
+                    break
+             
+                for j,ex in enumerate(session):
+                    if ex.name == specified_ex_pref.name:
+                        del sessions[i][j]
+                        done = True
+                        break
+            
+        elif specified_intensity <= intensity:
+            
+            found_session = None
+            done = False
+            for i,session in enumerate(sessions):
+                if done:
+                    break
+             
+                for j,ex in enumerate(session):
+                    if ex.name == specified_ex_pref.name:
+                        #specification = ("Session %d" % i, ex.name, specified_intensity)
+                        #final_intensity.append(specification)
+                        already_exists = True
+                        ex.ActivityIntensity = [int(specified_intensity)]
+                        done = True 
+                        break
+                        
+                    if ex.is_a[0].label[0] == ex_class:
+                        found_session = i
+            if not already_exists:
+                specified_ex_pref.ActivityIntensity = [int(specified_intensity)]
+                sessions.append(specified_ex_pref)
+                #specification = ("Session %d" % i, specified_ex_pref.name, specified_intensity)
+                #final_intensity.append(specification)      
+                         
+    return sessions #,final_intensities]
 
-def generate(profile, hard_requirements, components):
+def generate(hard_plan_requirements, hard_component_requirements, components):
     # Use number of sessions from the profile to determine a schedule. Then divide the muscle
     # groups over the sessions.
-    sessions_number = profile.TimeAvailable[0]
+    sessions_amount = min(hard_plan_requirements,3) #3 is max for implementation
 
     # The experience level will also count.
-    experience = hard_requirements[0]
+    intensity = hard_component_requirements[0]
+    experience = hard_component_requirements[1]
 
     # The type of schedule the client will follow.
     schedule_type = ""
@@ -46,52 +89,71 @@ def generate(profile, hard_requirements, components):
     # empty, usable for later scheduling.
     session = [[], [], []]
 
-    if sessions_number < 2:
+    if sessions_amount < 2:
         schedule_type = "Full-Body"
-    elif sessions_number < 3:
+    elif sessions_amount < 3:
         schedule_type = "Upper-Lower"
-    elif sessions_number >= 3:
+    elif sessions_amount >= 3:
         if experience < 1:
             schedule_type = "PPL"
         else:
             schedule_type = "Classic-Split"
 
-
     # Depending on the schedule type, now divide muscle groups.
     if schedule_type == "Full-Body":
         for muscle_group in components:
-            for component in muscle_group:
-                session[0].append(component)
+            component = muscle_group.pop(0)
+            component.ActivityIntensity = [intensity]
+            session[0].append(component)
     
-
     elif schedule_type == "Upper-Lower":
-        for muscle_group in range(0, 7):
-            for component in components[muscle_group]:
-                if muscle_group == 0 or muscle_group == 1 or muscle_group == 6 or muscle_group == 3 or muscle_group == 4:
+        for muscle_group in components:
+            label = muscle_group[0].is_a[0].label[0]  #class Label
+            condition = "Chest" in label or "Shoulders" in label or "Biceps" in label or "Triceps" in label or "Back" in label
+            for i in range(2):
+                if len(muscle_group) == 0:
+                    break
+                component = muscle_group.pop(0)
+                component.ActivityIntensity = [intensity]
+                if condition:
                     session[0].append(component)
                 else:
                     session[1].append(component)
 
     elif schedule_type == "PPL":
-        for muscle_group in range(0, 7):
-            for component in components[muscle_group]:
-                if muscle_group == 0 or muscle_group == 6 or muscle_group == 4:
+        for muscle_group in components:
+            label = muscle_group[0].is_a[0].label[0]  #class Label
+            condition = "Chest" in label or "Shoulders" in label or "Triceps" in label
+            condition2 = "Abs" in label or "Biceps" in label or "Back" in label
+
+            for i in range(3):
+                if len(muscle_group) == 0:
+                    break
+                component = muscle_group.pop(0)
+                component.ActivityIntensity = [intensity]
+                if condition:
                     session[0].append(component)
-                elif muscle_group == 1 or muscle_group == 3 or muscle_group == 6:
+                elif condition2:
                     session[1].append(component)
                 else:
                     session[2].append(component)
 
     elif schedule_type == "Classic-Split":
-        for muscle_group in range(0, 7):
-            for component in components[muscle_group]:
-                if muscle_group == 0 or muscle_group == 1:
+        for muscle_group in components:
+            label = muscle_group[0].is_a[0].label[0]  #class Label
+            condition = "Chest" in label or "Back" in label
+            condition2 = "Abs" in label or "Legs" in label or "Endurance" in label 
+            for i in range(3):
+                if len(muscle_group) == 0:
+                    break
+                component = muscle_group.pop(0)
+                component.ActivityIntensity = [intensity]
+                if condition:
                     session[0].append(component)
-                elif muscle_group == 2 or muscle_group == 5:
+                elif condition2:
                     session[1].append(component)
                 else:
                     session[2].append(component)
-
 
     # Some test prints.
     print(schedule_type)
@@ -105,68 +167,66 @@ def generate(profile, hard_requirements, components):
 
     return session
 
-def get_exercises(group, generic_exercise_list, exercise_number, injuries):
+def check_type_injury(type_injury, generic_exercise_list, injuries):
     # General function for getting exercises for a specific group, based on the number of
     # exercises we want to get.
 
-    # List where all exercises will go.
-    exercise_list = []
-
-    # Check per group if the injury is in the list. If not, then pick exercises from that group.
-    counter = 0
-    skip = False
+    # Check per group if the injury is in the list. If not, then return exercises from that group.
     for injury in injuries:
-        if group in injury.ancestors():
-            skip= True
-    
-    if not skip:
-        while counter < exercise_number:
-            new_exercise = random.choice(generic_exercise_list)
-
-            if not new_exercise in exercise_list:
-                exercise_list.append(new_exercise)
-                counter += 1
-
-    return exercise_list
+        if type_injury in injury.is_a[0].ancestors():
+            return []
+            
+    return generic_exercise_list
 
 def component_selection(goal,profile,injuries,hard_component_requirements):
     # Use the goal to find exercises.
     goal_instance = goal.name
     goal_class = [ancestor.name for ancestor in goal.is_a[0].ancestors() if ancestor.name != "Thing" and ancestor.name != "Goal"][0]
-    
-    # Get the list of injuries, to exclude any exercise from that category.
-    injuries #List of injuries object, get label with .label (which all should have) otherwise .name for class name   
-    
-    # Depending on time available, pick x exercises from any category.
-    sessions_available = profile.TimeAvailable[0]
-    exercises_per_group = sessions_available
 
-    # The list of exercises per muscle group.
-    chest = get_exercises(onto.Chest_Injury, ex_chest, exercises_per_group, injuries)
-    back = get_exercises(injuries[2], ex_back, exercises_per_group, injuries)
-    legs = get_exercises(injuries[-11], ex_legs, exercises_per_group, injuries)
-    biceps = get_exercises(onto.BicepsInjury, ex_biceps, exercises_per_group, injuries)
-    triceps = get_exercises(onto.TricepsInjury, ex_triceps, exercises_per_group, injuries)
-    absm = get_exercises(onto.Abs_Injury, ex_abs, exercises_per_group, injuries)
-    shoulders = get_exercises(onto.ShoulderInjury, ex_shoulders, exercises_per_group, injuries)
-    endurance = get_exercises(onto.ShoulderInjury, ex_endurance, exercises_per_group, injuries)
+    # The list of exercises per muscle group if not in injury
+    
+    #Classes with specific ordering
+    ex_chest = [onto.BenchPress, onto.DumbbellFlyes, onto.InclineBenchPress, onto.MachinePress]
+    ex_back = [onto.Deadlifts, onto.LateralPulldowns, onto.DumbbellRows, onto.MachineRows, onto.CableRows]
+    ex_legs = [onto.Squats, onto.RomanianDeadlifts, onto.LegCurls, onto.LegExtensions, onto.ProneLegCurls]
+    ex_biceps = [onto.Curls, onto.HammerCurls, onto.ReverseGripCurls]
+    ex_triceps = [onto.BarPushdowns, onto.RopePushdowns, onto.Skullcrushers]
+    ex_abs = [onto.Crunches, onto.Situps, onto.Bicycle_Situps, onto.Planking]
+    ex_shoulders = [onto.MilitaryPress, onto.LateralRaises, onto.FacePulls, onto.RearDeltMachine]
+    ex_endurance = [onto.Running, onto.Cycling, onto.Rowing, onto.Circuit_Training]
+    
+    
+    chest = check_type_injury(onto.Chest_Injury, ex_chest, injuries)
+    back = check_type_injury(onto_injuries[2], ex_back, injuries)
+    legs = check_type_injury(onto_injuries[-11], ex_legs, injuries)
+    biceps = check_type_injury(onto.BicepsInjury, ex_biceps, injuries)
+    triceps = check_type_injury(onto.TricepsInjury, ex_triceps, injuries)
+    absm = check_type_injury(onto.Abs_Injury, ex_abs, injuries)
+    shoulders = check_type_injury(onto.ShoulderInjury, ex_shoulders, injuries)
+    endurance = check_type_injury(onto_injuries[-11], ex_endurance, injuries)
+    running_only = [onto.Running] if len(endurance) > 0 else []
 
     # Return the combined list of all lists of exercises.
 
     if goal_class == "Endurance":
         components = [endurance]
     elif goal_class == "Health":
-        components = [chest,back,legs,absm,shoulders, [onto.Running]]
+        components = [chest,back,legs,absm,shoulders, running_only]
     else:
         components = [chest, back, legs, biceps, triceps, absm, shoulders]
         
+    final_components = []
+    for list_ex in components:
+        if len(list_ex) > 0:
+            final_components.append(list_ex)
 
     # Return the combined list of all lists of exercises.
-    return [chest, back, legs, biceps, triceps, absm, shoulders]
+    return final_components
 
 def operationalize(profile):
     # Training level, 0 - 4 (Beginner, Rookie, Intermediate, Experienced, Advanced).
     training_level = profile.TrainingLevel[0]
+    time_spent = profile.TimeSpentGym[0]  
 
     # If time was spent in the gym before, then we count that with the experience.
     schedule_before = 0
@@ -175,23 +235,29 @@ def operationalize(profile):
 
     # Calculate experience with the given training level * 0.2, and + 1 if they have followed a training schedule
     # before.
-    experience = training_level * 0.2 + schedule_before
+    for i in range(1,6):
+        thresh = i * 20 
+        if time_spent < thresh:
+            time_spent_addition = i * 0.2
+            break
+    
+    experience = training_level * 0.2 + schedule_before + time_spent_addition  
     
     # Intensity, 0 - 2 (Light, Medium, Heavy).
-    intensity = 2
+    intensity = 3
     if experience < 1:
-        intensity = 0
-    elif experience < 2:
         intensity = 1
+    elif experience < 2:
+        intensity = 2
 
     age = profile.Age[0]
 
     # If the client is over the age of 65 or under the age of 16, then the maximum intensity level is
     # medium, for health reasons.
-    if intensity > 1 and (age > 65 or age < 16):
+    if intensity > 2 and (age > 65 or age < 16):
         intensity = 1
 
-    hard_component_requirements = [experience, intensity]
+    hard_component_requirements = [intensity,experience]
     return hard_component_requirements
 
 def parse_input(data, preferences, injuries):
@@ -226,6 +292,7 @@ def parse_input(data, preferences, injuries):
     profile.TimeAvailable = [data[3]]
     profile.TrainingLevel = [data[4]]
     profile.FollowedScheduleBefore = [data[5]]
+    #profile.TimeSpentGym = [data[6]]
 
     person = onto.Person() #Can give a name
     person.WantsToAchieve = [person_goal]
@@ -358,7 +425,7 @@ def get_data():
     #possible_injuries = ['None', 'Chest', 'Back', 'Legs', 'Biceps', 'Triceps', 
     #                                  'Abs', 'Shoulders']
     
-    possible_injuries = [ x.label for x in onto.search(iri = "*Injury")[1:] if x.name != "Injury" and x.name != 'Connective_and_Soft_Tissue_Injury']
+    possible_injuries = [ x.label[0] for x in onto.search(iri = "*Injury")[1:] if x.name != "Injury" and x.name != 'Connective_and_Soft_Tissue_Injury']
     
     layout = [  
     [sg.Text('Please check where the client has an injury and click Next')],
@@ -391,6 +458,9 @@ def subfunct_text(schedule, i, j):
         return sg.Text(' '.ljust(20), size=(20,1))
 
 def get_approval(schedule):
+
+    #final_intensities = schedule[1]
+    #schedule = schedule[0]
     
     headings = ['Session ' + str(i+1) for i in range(3) if schedule[i]]
     header =  [[sg.Text('  ')] + [sg.Text(h, size=(20,1)) for h in headings]]
@@ -427,7 +497,7 @@ def main():
     # TEST INPUTS BELOW, this is how the data should look once received from the input:
 
     # Data format: [Age, Gender, Weight, Hours, Level, TrainingScheduleFollowed, Goal]
-    #data = [18, "M", 70, 3, 5, False, "Strength"]
+    #data = [18, "M", 70, 3, 5, False, "General strength"]
 
     # List of preferences. Always, in preferences, define exercises to remove from schedule.
     #crunches = instan_ex[0].name
@@ -447,20 +517,42 @@ def main():
     goal = person_info.WantsToAchieve[0]
     injuries = person_info.HasInjury
     
+    profile.TimeSpentGym = [41] #-----------------------------------------------------------------------Remove this if implemented
+    print(preferences)
+    
     # Determine hard component requirements. Format is always [Intensity, Experience].
     hard_component_requirements = operationalize(profile)
-    return
+    intensity = hard_component_requirements[0]
+
     # Select the components, which in this case include all exercise to be done by the client. In case of an injury,
     # the list of exercises for that specific muscle group is empty. The general format for the exercises
     # list is as follows: [chest, back, legs, biceps, triceps, abs, shoulders].
     components = component_selection(goal,profile,injuries,hard_component_requirements)
-
+    #print(components,"\n")
     # Generate a schedule from the set of existing schedules, depending on the profile and hard requirements.
-    schedule = generate(profile, hard_requirements, components)
+    hard_plan_requirements = profile.TimeAvailable[0]
+    schedule = generate(hard_plan_requirements, hard_component_requirements, components)
+   
+    for s in schedule:
+        for ex in s:
+            print(ex.name,ex.ActivityIntensity)
 
     # Adapt the schedule to the preferences.
-    schedule = preference_incorporation(profile, schedule)
-
+    schedule = preference_incorporation(preferences, schedule,intensity)
+    
+    session = schedule
+    print("After preference incorporation")
+    print("\n")
+    print(session[0])
+    print("\n")
+    print(session[1])
+    print("\n")
+    print(session[2])
+    print("\n")
+    for s in session:
+        for ex in s:
+            print(ex.name,ex.ActivityIntensity)
+    #return
     # Judgment by the client.
     # Open a new window. Show the schedule. Click yes or no. If yes, end. If no, go back to input.
     approved = get_approval(schedule)
