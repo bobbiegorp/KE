@@ -280,8 +280,14 @@ def parse_input(data, preferences, injuries):
     except:
         raise Exception("Input error: Time available per week should be an integer")  
         
+    try:
+        data[7] = int(data[7])
+    except:
+        raise Exception("Input error: Estimated total time spent in gym should be an integer")  
     
-    chosen_goal = data[-1].lower().replace(" ","")
+        
+    print(data[6])
+    chosen_goal = data[6].lower().replace(" ","")
     for onto_goal in onto_goals:
         base_goal_name = re.sub(r'_', "", onto_goal.name).lower() #Do this in case of exercises with a _ seperator
         if chosen_goal == base_goal_name:
@@ -296,7 +302,7 @@ def parse_input(data, preferences, injuries):
     profile.TimeAvailable = [data[3]]
     profile.TrainingLevel = [data[4]]
     profile.FollowedScheduleBefore = [data[5]]
-    # profile.TimeSpentGym = [data[6]] <----------------------------------------------------------------Uncomment this if implemented
+    profile.TimeSpentGym = [data[7]] #<----------------------------------------------------------------Uncomment this if implemented
 
     person = onto.Person() #Can give a name
     person.WantsToAchieve = [person_goal]
@@ -359,6 +365,7 @@ def get_data():
                                           'General strength', 'Bodybuilding', 'General aesthetics', 'General endurance', 
                                           'Specific endurance'), size=(20, 10))],
         [sg.Checkbox('Client has specific preferences')],
+        [sg.Text('Estimated total time spent in gym in hours'), sg.InputText()],
         
         [sg.Button('Next'), sg.Button('Cancel')] ]
     
@@ -369,11 +376,15 @@ def get_data():
     while True:
         event, values = window.read()
         if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+            if event == 'Cancel':
+                window.close()
+                return [], [], []
             break
+        
         data = values 
         
         window.close()
-        
+      
     # Preference incorporation in the input.
     if data[7] == True:
         #possible_values = ex_abs + ex_back + ex_biceps + ex_chest + ex_legs + ex_shoulders + ex_triceps
@@ -381,12 +392,12 @@ def get_data():
         
         layout = [  
         [sg.Text('Please fill in preferences and click Next')],
-        [sg.Text('                                                                         '), 
+        [sg.Text('                                                                       '), 
          sg.Text('Intensity')],
         
         [sg.Text('Preference 1'), sg.InputCombo(possible_values, default_value='None', size=(20, 7)),  
          sg.Text('    '),
-         sg.Slider(range=(1, 5), orientation='h', size=(10, 20), default_value=1),
+         sg.Slider(range=(1, 3), orientation='h', size=(10, 20), default_value=1),
          sg.Text('    '),
          sg.Checkbox('Include')],
         
@@ -411,6 +422,9 @@ def get_data():
 
             # If the user closes window or clicks cancel.
             if event in (None, 'Cancel'):
+                if event == 'Cancel':
+                    window.close()
+                    return [], [], []
                 break
 
             # Create right output data shape.          
@@ -449,20 +463,25 @@ def get_data():
     while True:
         event, values = window.read()
         if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+            if event == 'Cancel':
+                window.close()
+                return [], [], []
             break
         values = list(values.values())
         injuries = [x for x in values if x != 'None']
     
         window.close()
             
-    data = list(data.values())[:7]
+    data = list(data.values())
+    del data[7]
     
     return data, preferences, injuries
 
 
 def subfunct_text(schedule, i, j):
     try:
-        return sg.Text(schedule[j][i].ljust(20), size=(20,1))
+        
+        return sg.Text(schedule[j][i].name.ljust(20), size=(20,1))
     except:
         return sg.Text(' '.ljust(20), size=(20,1))
 
@@ -492,12 +511,13 @@ def get_approval(schedule):
     while True:
         event, values = window.read()
         if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+            if event == 'Cancel':
+                window.close()
+                return None
             break
         
         if event == 'Refuse':
             approved = False
-            
-        window.close()
     
     return approved
     
@@ -505,6 +525,8 @@ def get_approval(schedule):
 def main():
     
     data, preferences, injuries = get_data()
+    if data == [] and preferences ==  [] and injuries == []:
+        return None
     # TEST INPUTS BELOW, this is how the data should look once received from the input:
 
     # Data format: [Age, Gender, Weight, Hours, Level, TrainingScheduleFollowed, Goal]
@@ -567,6 +589,9 @@ def main():
     # Judgment by the client.
     # Open a new window. Show the schedule. Click yes or no. If yes, end. If no, go back to input.
     approved = get_approval(schedule)
+    
+    if approved is None:
+        return None
     
     if not approved:
         schedule = main()
