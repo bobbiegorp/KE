@@ -3,7 +3,8 @@ import random, re
 from owlready2 import *
 import math
 
-onto = get_ontology("file://./final_ontology2.owl").load() #Can also load after GUI to reduce waiting time, then move the global variables
+# Can also load after GUI to reduce waiting time, then move the global variables.
+onto = get_ontology("file://./final_ontology2.owl").load()
 
 '''
 #General Classes
@@ -16,7 +17,6 @@ ex_abs = onto.search(type = onto.AbsExercise)
 ex_shoulders = onto.search(type = onto.ShouldersExercise)
 ex_endurance = onto.search(type = onto.Endurance_Exercise)
 '''
-
 
 onto_injuries = onto.search(iri = "*Injury")[1:]
 onto_goals = onto.search(type = onto.Goal)
@@ -374,6 +374,7 @@ def get_data():
         
         window.close()
         
+    # Preference incorporation in the input.
     if data[7] == True:
         #possible_values = ex_abs + ex_back + ex_biceps + ex_chest + ex_legs + ex_shoulders + ex_triceps
         possible_values = [ex.name for ex in onto.search(type = onto.Exercise)]
