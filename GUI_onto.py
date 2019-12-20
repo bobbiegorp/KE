@@ -292,7 +292,7 @@ def parse_input(data, preferences, injuries):
     profile.TimeAvailable = [data[3]]
     profile.TrainingLevel = [data[4]]
     profile.FollowedScheduleBefore = [data[5]]
-    #profile.TimeSpentGym = [data[6]]
+    #profile.TimeSpentGym = [data[6]] <----------------------------------------------------------------Uncomment this if implemented
 
     person = onto.Person() #Can give a name
     person.WantsToAchieve = [person_goal]
