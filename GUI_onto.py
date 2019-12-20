@@ -22,7 +22,7 @@ onto_injuries = onto.search(iri = "*Injury")[1:]
 onto_goals = onto.search(type = onto.Goal)
 instan_ex = onto.search(type = onto.Exercise)
 
-def preference_incorporation(preferences, sessions,intensity):
+def preference_incorporation(preferences, sessions,intensity,components):
     
     #intensity = schedule[1]
     #final_intensities = [intensity]
@@ -42,7 +42,17 @@ def preference_incorporation(preferences, sessions,intensity):
              
                 for j,ex in enumerate(session):
                     if ex.name == specified_ex_pref.name:
-                        del sessions[i][j]
+                        subs_avail = False
+                        for muscle_group in components:
+                            if len(muscle_group) > 0 and muscle_group[0].is_a[0].label[0] == ex_class:
+                                component = muscle_group.pop(0)
+                                component.ActivityIntensity = [intensity]
+                                sessions[i][j] = component
+                                subs_avail = True
+                                break
+                                
+                        if not subs_avail:
+                            del sessions[i][j]
                         done = True
                         break
             
@@ -169,7 +179,7 @@ def generate(hard_plan_requirements, hard_component_requirements, components):
     print(session[2])
     print("\n")
 
-    return session
+    return session,components
 
 def check_type_injury(type_injury, generic_exercise_list, injuries):
     # General function for getting exercises for a specific group, based on the number of
@@ -240,7 +250,7 @@ def operationalize(profile):
     # before.
     for i in range(1,6):
         thresh = i * 20 
-        if time_spent < thresh:
+        if min(time_spent,99) < thresh:
             time_spent_addition = i * 0.2
             break
     
@@ -257,8 +267,8 @@ def operationalize(profile):
 
     # If the client is over the age of 65 or under the age of 16, then the maximum intensity level is
     # medium, for health reasons.
-    if intensity > 2 and (age > 65 or age < 16):
-        intensity = 1
+    if intensity > 2 and (age > 60 or age < 16):
+        intensity = 2
 
     hard_component_requirements = [intensity,experience]
     return hard_component_requirements
@@ -552,8 +562,9 @@ def main():
     goal = person_info.WantsToAchieve[0]
     injuries = person_info.HasInjury
     
-    profile.TimeSpentGym = [41] #-----------------------------------------------------------------------Remove this if implemented
+    #profile.TimeSpentGym = [41] #-----------------------------------------------------------------------Remove this if implemented
     print(preferences)
+    print(profile.TimeSpentGym)
     
     # Determine hard component requirements. Format is always [Intensity, Experience].
     hard_component_requirements = operationalize(profile)
@@ -566,14 +577,14 @@ def main():
     #print(components,"\n")
     # Generate a schedule from the set of existing schedules, depending on the profile and hard requirements.
     hard_plan_requirements = profile.TimeAvailable[0]
-    schedule = generate(hard_plan_requirements, hard_component_requirements, components)
+    schedule,components = generate(hard_plan_requirements, hard_component_requirements, components)
    
     for s in schedule:
         for ex in s:
             print(ex.name,ex.ActivityIntensity)
 
     # Adapt the schedule to the preferences.
-    schedule = preference_incorporation(preferences, schedule,intensity)
+    schedule = preference_incorporation(preferences, schedule,intensity,components)
     
     session = schedule
     print("After preference incorporation")
